@@ -10,7 +10,7 @@
 
 <p align="center">
 <img src="https://img.shields.io/badge/Go-1.21%2B-007ACC" alt="Go Version">
-<img src="https://img.shields.io/badge/License-MIT-red" alt="License">
+<img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License">
 <img src="https://img.shields.io/badge/build-passing-yellow" alt="Build Status">
 <a href="https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/shuakami/linkit/master/docs/api.yaml"><img src="https://img.shields.io/badge/API%20文档-在线查看-2ea44f" alt="API Docs"></a>
 </p>
@@ -19,14 +19,14 @@
 
 它不仅提供基本的短链接功能，还支持智能跳转和详细的访问统计，帮助企业更好地管理和分析链接数据。
 
-## 特性
-
-<p align="center">
-  <img src="images/other/fast_cn.png" alt="Linkit Performance" width="800">
-</p>
+## 产品特性
 
 <p align="center">
   <img src="images/other/short_zh.png" alt="Linkit Management" width="800">
+</p>
+
+<p align="center">
+  <img src="images/other/fast_cn.png" alt="Linkit Performance" width="800">
 </p>
 
 ## 核心功能

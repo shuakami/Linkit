@@ -10,7 +10,7 @@
 
 <p align="center">
 <img src="https://img.shields.io/badge/Go-1.21%2B-007ACC" alt="Go Version">
-<img src="https://img.shields.io/badge/License-MIT-lightgrey" alt="License">
+<img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License">
 <img src="https://img.shields.io/badge/build-passing-44CC11" alt="Build Status">
 <a href="https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/shuakami/linkit/master/docs/api.yaml"><img src="https://img.shields.io/badge/API-Documentation-2ea44f" alt="API Docs"></a>
 </p>
@@ -19,14 +19,14 @@ A high-performance URL shortening service system developed in Go, implemented us
 
 It not only provides basic URL shortening functionality but also supports intelligent redirection and detailed access statistics to help businesses better manage and analyze link data.
 
-## Features
-
-<p align="center">
-  <img src="images/other/fast_cn.png" alt="Linkit Performance" width="800">
-</p>
+## Product Features
 
 <p align="center">
   <img src="images/other/short_zh.png" alt="Linkit Management" width="800">
+</p>
+
+<p align="center">
+  <img src="images/other/fast_cn.png" alt="Linkit Performance" width="800">
 </p>
 
 ## Core Features
