@@ -51,7 +51,7 @@ Follow these steps to quickly start the Linkit service:
 
 1. Clone the project locally:
    ```bash
-   git clone https://github.com/yourusername/linkit.git
+   git clone https://github.com/shuakami/linkit.git
    cd linkit
    ```
 
@@ -59,28 +59,40 @@ Follow these steps to quickly start the Linkit service:
    - Install Go 1.21+
    - Install PostgreSQL 14+
    - Install Redis 7+
-   - Install Docker (optional)
 
 3. Configure the service:
+   
+   There's a configuration example file `configs/config.example.yaml` in the project root. Make a copy and rename it to `config.yaml`:
+
+   Windows:
+   ```cmd
+   copy configs\config.example.yaml configs\config.yaml
+   ```
+   
+   Linux/Mac:
    ```bash
    cp configs/config.example.yaml configs/config.yaml
-   vim configs/config.yaml
    ```
-   Modify the database and Redis connection information in the configuration file.
+
+   Then edit the `config.yaml` file, you mainly need to modify these configurations:
+   - Database connection (host, port, user, password, dbname)
+   - Redis connection (host, port, password)
+   - Short link domain (domain)
 
 4. Start the service:
-   Choose either of the following methods to start the service:
-   - Using Docker:
-     ```bash
-     docker-compose up -d
-     ```
-   - Manual start:
-     ```bash
-     go mod download
-     go run scripts/migrate.go
-     go run cmd/main.go
-     ```
+   ```bash
+   # Download dependencies
+   go mod download
+   
+   # Initialize database
+   go run scripts/migrate.go
+   
+   # Start service
+   go run cmd/main.go
+   ```
 
-Visit http://localhost:8080 to view the API documentation and start using Linkit.
+After the service starts, you can:
+1. Visit https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/shuakami/linkit/master/docs/api.yaml to view the online API documentation
+2. Or directly check the `docs/api.yaml` file in the project to understand the API details
 
 > If you find this project helpful, please consider giving it a star! 

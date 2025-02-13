@@ -51,7 +51,7 @@ Linkit 采用了现代化的技术栈，确保系统的高性能和可扩展性�
 
 1. 克隆项目到本地：
    ```bash
-   git clone https://github.com/yourusername/linkit.git
+   git clone https://github.com/shuakami/linkit.git
    cd linkit
    ```
 
@@ -59,28 +59,40 @@ Linkit 采用了现代化的技术栈，确保系统的高性能和可扩展性�
    - 安装 Go 1.21+
    - 安装 PostgreSQL 14+
    - 安装 Redis 7+
-   - 安装 Docker（可选）
 
 3. 配置服务：
+   
+   项目根目录下有一个示例配置文件 `configs/config.example.yaml`，复制一份并重命名为 `config.yaml`：
+
+   Windows:
+   ```cmd
+   copy configs\config.example.yaml configs\config.yaml
+   ```
+   
+   Linux/Mac:
    ```bash
    cp configs/config.example.yaml configs/config.yaml
-   vim configs/config.yaml
    ```
-   修改配置文件中的数据库和 Redis 连接信息。
+
+   然后编辑 `config.yaml` 文件，主要需要修改以下配置：
+   - 数据库连接信息（host、port、user、password、dbname）
+   - Redis连接信息（host、port、password）
+   - 短链接域名（domain）
 
 4. 启动服务：
-   选择以下任意一种方式启动服务：
-   - 使用 Docker：
-     ```bash
-     docker-compose up -d
-     ```
-   - 手动启动：
-     ```bash
-     go mod download
-     go run scripts/migrate.go
-     go run cmd/main.go
-     ```
+   ```bash
+   # 下载依赖
+   go mod download
+   
+   # 初始化数据库
+   go run scripts/migrate.go
+   
+   # 启动服务
+   go run cmd/main.go
+   ```
 
-访问 http://localhost:8080 查看 API 文档，开始使用 Linkit。
+服务启动后，你可以：
+1. 访问 https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/shuakami/linkit/master/docs/api.yaml 查看在线API文档
+2. 或直接查看项目中的 `docs/api.yaml` 文件了解API详情
 
 > 如果你觉得这个项目对你有帮助，那就给个Star呗~

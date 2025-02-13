@@ -1,0 +1,52 @@
+# 服务配置
+server:
+  # HTTP服务端口
+  port: 8080
+  # 允许的最大请求体大小(MB)
+  max_body_size: 4
+  # 是否开启请求速率限制
+  enable_rate_limit: true
+  # 每秒允许的最大请求数
+  rate_limit: 10
+
+# 数据库配置
+database:
+  # PostgreSQL连接信息
+  host: localhost
+  port: 5432
+  user: postgres
+  password: your_password
+  dbname: linkit
+  # 最大空闲连接数
+  max_idle_conns: 10
+  # 最大打开连接数
+  max_open_conns: 100
+
+# Redis配置
+redis:
+  # Redis连接信息
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  # 连接池大小
+  pool_size: 10
+
+# 短链接配置
+shortlink:
+  # 短链接域名
+  domain: "http://localhost:8080"
+  # 短码长度
+  code_length: 6
+  # 默认过期时间(天)，0表示永不过期
+  default_expire_days: 0
+  # 默认最大访问次数，0表示无限制 
+
+# 限流配置
+ratelimit:
+  # 是否启用限流
+  enabled: true
+  # 每秒允许的最大请求数
+  requests: 1000
+  # 限流时间间隔
+  duration: 1m
