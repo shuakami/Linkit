@@ -11,8 +11,8 @@
 <p align="center">
 <img src="https://img.shields.io/badge/Go-1.21%2B-007ACC" alt="Go Version">
 <img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License">
-<img src="https://img.shields.io/badge/build-passing-yellow" alt="Build Status">
-<a href="https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/shuakami/linkit/master/docs/api.yaml"><img src="https://img.shields.io/badge/API%20文档-在线查看-2ea44f" alt="API Docs"></a>
+<img src="https://img.shields.io/badge/build-passing-44CC11" alt="Build Status">
+<a href="https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/shuakami/linkit/master/docs/api.yaml"><img src="https://img.shields.io/badge/API-文档-2ea44f" alt="API Docs"></a>
 </p>
 
 这是一个使用 Go 语言开发的高性能短链接服务系统，采用领域驱动设计（DDD）和整洁架构（Clean Architecture）实现。

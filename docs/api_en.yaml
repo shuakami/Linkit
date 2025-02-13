@@ -1,0 +1,865 @@
+openapi: 3.0.0
+info:
+  title: Linkit URL Shortening Service API
+  description: |
+    Linkit is a powerful URL shortening service that provides URL shortening, management, analytics, and intelligent redirection rules.
+
+    As a modern URL shortening service, Linkit not only provides basic long-to-short URL conversion but also supports flexible custom short codes, making your links more recognizable and brand-friendly. The system records detailed access information for each link, including visit counts, visitor device types, geographic locations, and other data, helping you better understand link usage.
+
+    To meet different scenario requirements, Linkit provides rich link management features. You can set expiration times for links, after which they automatically become invalid; you can also limit maximum visit counts, after which links will no longer be accessible. These features help you better control link lifecycles and usage scope.
+
+    Another major feature is the intelligent redirection rule system. You can set different redirection targets based on visitor device types (mobile, desktop, tablet, etc.) and geographic locations (country, province, city). The system also supports A/B testing functionality, allowing you to set multiple target URLs for the same short link and conduct effectiveness tests through traffic ratio settings. These advanced features make your short links not just simple redirection tools but powerful assistants for precise marketing and user experience optimization.
+
+    ## Error Handling
+    The API uses standard HTTP status codes to indicate request status. Error response format:
+    ```json
+    {
+      "code": 400001,
+      "message": "Error message",
+      "details": "Detailed explanation"
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: shuakami@sdjz.wiki
+
+servers:
+  - url: http://localhost:8080
+    description: Local Development Environment
+  - url: https://api.example.com
+    description: Production Environment (Needs Configuration)
+
+tags:
+  - name: Short Links
+    description: Basic operations for short links
+  - name: Redirect Rules
+    description: Redirect rule management for short links
+  - name: Analytics
+    description: Access analytics for short links
+
+paths:
+  /api/v1/links:
+    post:
+      tags:
+        - Short Links
+      summary: Create Short Link
+      description: Create a new short link with support for custom code, expiration time, and other settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShortLinkInput'
+            example:
+              long_url: "https://example.com/very/long/url"
+              custom_code: "mycode"
+              expires_at: "2024-12-31T23:59:59Z"
+              default_redirect: 1
+              never_expire: false
+      responses:
+        '201':
+          description: Created Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    
+    get:
+      tags:
+        - Short Links
+      summary: Get Short Link List
+      description: Get short link list with support for pagination, filtering, and sorting
+      parameters:
+        - name: page
+          in: query
+          description: Page number (starts from 1)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          description: Items per page (1-100)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: filter
+          in: query
+          description: Filter conditions
+          required: false
+          schema:
+            $ref: '#/components/schemas/ShortLinkFilter'
+        - name: sort
+          in: query
+          description: Sort conditions
+          required: false
+          schema:
+            $ref: '#/components/schemas/ShortLinkSort'
+      responses:
+        '200':
+          description: Retrieved Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedShortLinks'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/links/{code}:
+    get:
+      tags:
+        - Short Links
+      summary: Get Short Link Details
+      description: Get detailed information for a specific short code
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Retrieved Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags:
+        - Short Links
+      summary: Update Short Link
+      description: Update information for a specific short code
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShortLinkInput'
+      responses:
+        '200':
+          description: Updated Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    delete:
+      tags:
+        - Short Links
+      summary: Delete Short Link
+      description: Delete a specific short code
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted Successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{code}:
+    get:
+      tags:
+        - Short Links
+      summary: Short Link Redirection
+      description: Smart redirection based on short code and rules
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+      responses:
+        '301':
+          description: Moved Permanently
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Target URL
+        '302':
+          description: Found (Temporary Redirect)
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Target URL
+        '307':
+          description: Temporary Redirect (Preserve Method)
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Target URL
+        '308':
+          description: Permanent Redirect (Preserve Method)
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Target URL
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+
+  /api/v1/links/{code}/rules:
+    post:
+      tags:
+        - Redirect Rules
+      summary: Create Redirect Rule
+      description: Create a new redirect rule for a specific short link
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleInput'
+      responses:
+        '201':
+          description: Created Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    get:
+      tags:
+        - Redirect Rules
+      summary: Get Redirect Rule List
+      description: Get all redirect rules for a specific short link
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Retrieved Successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags:
+        - Redirect Rules
+      summary: Batch Update Redirect Rules
+      description: Batch update all redirect rules for a specific short link
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateRuleInput'
+      responses:
+        '200':
+          description: Updated Successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/links/{code}/rules/{ruleId}:
+    put:
+      tags:
+        - Redirect Rules
+      summary: Update Redirect Rule
+      description: Update a specific redirect rule
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: Rule ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleInput'
+      responses:
+        '200':
+          description: Updated Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    delete:
+      tags:
+        - Redirect Rules
+      summary: Delete Redirect Rule
+      description: Delete a specific redirect rule
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: Rule ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted Successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/links/{code}/logs:
+    get:
+      tags:
+        - Analytics
+      summary: Get Access Log List
+      description: Get access log list for a specific short link with support for pagination, filtering, and sorting
+      parameters:
+        - name: code
+          in: path
+          description: Short code
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number (starts from 1)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          description: Items per page (1-100)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: start_time
+          in: query
+          description: Start time (RFC3339 format)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End time (RFC3339 format)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: ip
+          in: query
+          description: IP address
+          required: false
+          schema:
+            type: string
+        - name: country
+          in: query
+          description: Country/Region code
+          required: false
+          schema:
+            type: string
+        - name: device
+          in: query
+          description: Device type (0=all devices,1=mobile,2=desktop,3=tablet)
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1, 2, 3]
+        - name: rule_id
+          in: query
+          description: Rule ID
+          required: false
+          schema:
+            type: integer
+        - name: sort_field
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum: [created_at, ip, country, device]
+        - name: sort_direction
+          in: query
+          description: Sort direction
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Retrieved Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClickLogs'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    RedirectType:
+      type: integer
+      enum: [1, 2, 3, 4]
+      description: |
+        Redirect type:
+        * 1 - Moved Permanently (301)
+        * 2 - Found (302)
+        * 3 - Temporary Redirect (307)
+        * 4 - Permanent Redirect (308)
+
+    DeviceType:
+      type: integer
+      enum: [0, 1, 2, 3]
+      description: |
+        Device type:
+        * 0 - All devices
+        * 1 - Mobile devices
+        * 2 - Desktop devices
+        * 3 - Tablet devices
+
+    CreateShortLinkInput:
+      type: object
+      required:
+        - long_url
+      properties:
+        long_url:
+          type: string
+          format: uri
+          description: Original URL
+        custom_code:
+          type: string
+          description: Custom short code
+        expires_at:
+          type: string
+          format: date-time
+          description: Expiration time
+        user_id:
+          type: integer
+          description: User ID
+        default_redirect:
+          $ref: '#/components/schemas/RedirectType'
+        never_expire:
+          type: boolean
+          description: Whether never expires
+
+    UpdateShortLinkInput:
+      type: object
+      properties:
+        long_url:
+          type: string
+          format: uri
+          description: Original URL
+        max_visits:
+          type: integer
+          description: Maximum visit count limit
+        expires_at:
+          type: string
+          format: date-time
+          description: Expiration time
+        never_expire:
+          type: boolean
+          description: Whether never expires
+        default_redirect:
+          $ref: '#/components/schemas/RedirectType'
+
+    CreateRuleInput:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: Rule name
+        description:
+          type: string
+          description: Rule description
+        priority:
+          type: integer
+          description: Priority (higher number means higher priority)
+        type:
+          $ref: '#/components/schemas/RedirectType'
+        target_url:
+          type: string
+          format: uri
+          description: Target URL (use original URL if empty)
+        device:
+          $ref: '#/components/schemas/DeviceType'
+        start_time:
+          type: string
+          format: date-time
+          description: Start time
+        end_time:
+          type: string
+          format: date-time
+          description: End time
+        countries:
+          type: array
+          items:
+            type: string
+          description: Country list
+        percentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: A/B testing traffic percentage
+        max_visits:
+          type: integer
+          description: Maximum visit count
+
+    RedirectRule:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Rule ID
+        short_link_id:
+          type: integer
+          description: Short link ID
+        name:
+          type: string
+          description: Rule name
+        description:
+          type: string
+          description: Rule description
+        priority:
+          type: integer
+          description: Priority
+        type:
+          $ref: '#/components/schemas/RedirectType'
+        target_url:
+          type: string
+          format: uri
+          description: Target URL
+        device:
+          $ref: '#/components/schemas/DeviceType'
+        start_time:
+          type: string
+          format: date-time
+          description: Start time
+        end_time:
+          type: string
+          format: date-time
+          description: End time
+        countries:
+          type: array
+          items:
+            type: string
+          description: Country list
+        provinces:
+          type: array
+          items:
+            type: string
+          description: Province list
+        cities:
+          type: array
+          items:
+            type: string
+          description: City list
+        percentage:
+          type: integer
+          description: A/B testing traffic percentage
+        max_visits:
+          type: integer
+          description: Maximum visit count
+        created_at:
+          type: string
+          format: date-time
+          description: Creation time
+        updated_at:
+          type: string
+          format: date-time
+          description: Update time
+
+    ShortLink:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Short link ID
+        short_code:
+          type: string
+          description: Short code
+        long_url:
+          type: string
+          format: uri
+          description: Original URL
+        user_id:
+          type: integer
+          description: User ID
+        clicks:
+          type: integer
+          description: Click count
+        max_visits:
+          type: integer
+          description: Maximum visit count limit
+        expires_at:
+          type: string
+          format: date-time
+          description: Expiration time
+        never_expire:
+          type: boolean
+          description: Whether never expires
+        default_redirect:
+          $ref: '#/components/schemas/RedirectType'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedirectRule'
+          description: Redirect rule list
+        created_at:
+          type: string
+          format: date-time
+          description: Creation time
+        updated_at:
+          type: string
+          format: date-time
+          description: Update time
+
+    ShortLinkFilter:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: User ID filter
+        is_expired:
+          type: boolean
+          description: Whether expired
+        start_time:
+          type: string
+          format: date-time
+          description: Creation time range start
+        end_time:
+          type: string
+          format: date-time
+          description: Creation time range end
+        min_clicks:
+          type: integer
+          description: Minimum click count
+        max_clicks:
+          type: integer
+          description: Maximum click count
+
+    ShortLinkSort:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Sort field
+        direction:
+          type: string
+          enum: [asc, desc]
+          description: Sort direction
+
+    PaginatedShortLinks:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total record count
+        total_pages:
+          type: integer
+          description: Total page count
+        current_page:
+          type: integer
+          description: Current page number
+        page_size:
+          type: integer
+          description: Items per page
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShortLink'
+          description: Current page data
+
+    PaginatedClickLogs:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total record count
+        total_pages:
+          type: integer
+          description: Total page count
+        current_page:
+          type: integer
+          description: Current page number
+        page_size:
+          type: integer
+          description: Items per page
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClickLog'
+          description: Current page data
+
+    ClickLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Log ID
+        short_link_id:
+          type: integer
+          description: Short link ID
+        rule_id:
+          type: integer
+          description: Used rule ID
+        ip:
+          type: string
+          description: Visitor IP
+        user_agent:
+          type: string
+          description: User-Agent
+        referer:
+          type: string
+          description: Referrer page
+        country:
+          type: string
+          description: Visitor country/region
+        device:
+          $ref: '#/components/schemas/DeviceType'
+        created_at:
+          type: string
+          format: date-time
+          description: Access time
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 400001
+              message:
+                type: string
+                example: "Invalid request parameters"
+              details:
+                type: string
+                example: "Please check if the parameter format is correct"
+
+    NotFound:
+      description: Resource Not Found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 404001
+              message:
+                type: string
+                example: "Short link not found"
+              details:
+                type: string
+                example: "Please check if the short code is correct, or the link may have been deleted"
+
+    Conflict:
+      description: Resource Conflict
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 409001
+              message:
+                type: string
+                example: "Custom short code already in use"
+              details:
+                type: string
+                example: "Please try another short code, or let the system generate one automatically"
+
+    Gone:
+      description: Resource Gone
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 410001
+              message:
+                type: string
+                example: "Short link expired"
+              details:
+                type: string
+                example: "This link has exceeded its validity period and cannot be accessed" 
