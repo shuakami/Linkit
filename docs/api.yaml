@@ -1,0 +1,865 @@
+openapi: 3.0.0
+info:
+  title: Linkit短链接服务API
+  description: |
+    Linkit是一个功能强大的短链接服务，提供短链接生成、管理、统计和智能跳转规则等功能。
+
+    作为一个现代化的短链接服务，Linkit不仅提供基础的长链接转短链接功能，还支持灵活的自定义短码，让您的链接更具识别度和品牌特色。系统会详细记录每个链接的访问情况，包括访问次数、访问者的设备类型、地理位置等数据，帮助您更好地了解链接的使用情况。
+
+    为了满足不同场景的需求，Linkit提供了丰富的链接管理功能。您可以为链接设置过期时间，到期后链接自动失效；也可以限制最大访问次数，超过限制后链接将不再可用。这些功能可以帮助您更好地控制链接的生命周期和使用范围。
+
+    还有一大特色是智能跳转规则系统。您可以根据访问者的设备类型（移动设备、桌面设备、平板等）、地理位置（国家、省份、城市）设置不同的跳转目标。系统还支持A/B测试功能，允许您为同一个短链接设置多个目标URL，并通过设置流量比例来进行效果测试。这些高级功能让您的短链接不再是简单的跳转工具，而是成为精准营销和用户体验优化的得力助手。
+
+    ## 错误处理
+    API使用标准HTTP状态码表示请求状态。错误响应格式如下:
+    ```json
+    {
+      "code": 400001,
+      "message": "错误信息",
+      "details": "详细说明"
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: shuakami@sdjz.wiki
+
+servers:
+  - url: http://localhost:8080
+    description: 本地开发环境
+  - url: https://api.example.com
+    description: 生产环境（需要配置）
+
+tags:
+  - name: 短链接
+    description: 短链接的基本操作
+  - name: 跳转规则
+    description: 短链接的跳转规则管理
+  - name: 统计
+    description: 短链接的访问统计
+
+paths:
+  /api/v1/links:
+    post:
+      tags:
+        - 短链接
+      summary: 创建短链接
+      description: 创建一个新的短链接，支持自定义短码、过期时间等设置
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShortLinkInput'
+            example:
+              long_url: "https://example.com/very/long/url"
+              custom_code: "mycode"
+              expires_at: "2024-12-31T23:59:59Z"
+              default_redirect: 1
+              never_expire: false
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    
+    get:
+      tags:
+        - 短链接
+      summary: 获取短链接列表
+      description: 获取短链接列表，支持分页、过滤和排序
+      parameters:
+        - name: page
+          in: query
+          description: 页码(从1开始)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          description: 每页数量(1-100)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: filter
+          in: query
+          description: 过滤条件
+          required: false
+          schema:
+            $ref: '#/components/schemas/ShortLinkFilter'
+        - name: sort
+          in: query
+          description: 排序条件
+          required: false
+          schema:
+            $ref: '#/components/schemas/ShortLinkSort'
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedShortLinks'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/links/{code}:
+    get:
+      tags:
+        - 短链接
+      summary: 获取短链接详情
+      description: 获取指定短码的短链接详细信息
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags:
+        - 短链接
+      summary: 更新短链接
+      description: 更新指定短码的短链接信息
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShortLinkInput'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    delete:
+      tags:
+        - 短链接
+      summary: 删除短链接
+      description: 删除指定短码的短链接
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 删除成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{code}:
+    get:
+      tags:
+        - 短链接
+      summary: 短链接跳转
+      description: 根据短码和规则进行智能跳转
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+      responses:
+        '301':
+          description: 永久重定向
+          headers:
+            Location:
+              schema:
+                type: string
+              description: 目标URL
+        '302':
+          description: 临时重定向
+          headers:
+            Location:
+              schema:
+                type: string
+              description: 目标URL
+        '307':
+          description: 临时重定向(保持方法)
+          headers:
+            Location:
+              schema:
+                type: string
+              description: 目标URL
+        '308':
+          description: 永久重定向(保持方法)
+          headers:
+            Location:
+              schema:
+                type: string
+              description: 目标URL
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+
+  /api/v1/links/{code}/rules:
+    post:
+      tags:
+        - 跳转规则
+      summary: 创建跳转规则
+      description: 为指定短链接创建新的跳转规则
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleInput'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    get:
+      tags:
+        - 跳转规则
+      summary: 获取跳转规则列表
+      description: 获取指定短链接的所有跳转规则
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags:
+        - 跳转规则
+      summary: 批量更新跳转规则
+      description: 批量更新指定短链接的所有跳转规则
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateRuleInput'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/links/{code}/rules/{ruleId}:
+    put:
+      tags:
+        - 跳转规则
+      summary: 更新跳转规则
+      description: 更新指定的跳转规则
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: 规则ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleInput'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedirectRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    delete:
+      tags:
+        - 跳转规则
+      summary: 删除跳转规则
+      description: 删除指定的跳转规则
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: 规则ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: 删除成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/links/{code}/logs:
+    get:
+      tags:
+        - 统计
+      summary: 获取访问记录列表
+      description: 获取指定短链接的访问记录列表，支持分页、过滤和排序
+      parameters:
+        - name: code
+          in: path
+          description: 短链接码
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: 页码(从1开始)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          description: 每页数量(1-100)
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: start_time
+          in: query
+          description: 开始时间(RFC3339格式)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: 结束时间(RFC3339格式)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: ip
+          in: query
+          description: IP地址
+          required: false
+          schema:
+            type: string
+        - name: country
+          in: query
+          description: 国家/地区代码
+          required: false
+          schema:
+            type: string
+        - name: device
+          in: query
+          description: 设备类型(0=所有设备,1=移动设备,2=桌面设备,3=平板设备)
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1, 2, 3]
+        - name: rule_id
+          in: query
+          description: 规则ID
+          required: false
+          schema:
+            type: integer
+        - name: sort_field
+          in: query
+          description: 排序字段
+          required: false
+          schema:
+            type: string
+            enum: [created_at, ip, country, device]
+        - name: sort_direction
+          in: query
+          description: 排序方向
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClickLogs'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    RedirectType:
+      type: integer
+      enum: [1, 2, 3, 4]
+      description: |
+        跳转类型:
+        * 1 - 永久重定向(301)
+        * 2 - 临时重定向(302)
+        * 3 - 临时重定向保持方法(307)
+        * 4 - 永久重定向保持方法(308)
+
+    DeviceType:
+      type: integer
+      enum: [0, 1, 2, 3]
+      description: |
+        设备类型:
+        * 0 - 所有设备
+        * 1 - 移动设备
+        * 2 - 桌面设备
+        * 3 - 平板设备
+
+    CreateShortLinkInput:
+      type: object
+      required:
+        - long_url
+      properties:
+        long_url:
+          type: string
+          format: uri
+          description: 原始URL
+        custom_code:
+          type: string
+          description: 自定义短码
+        expires_at:
+          type: string
+          format: date-time
+          description: 过期时间
+        user_id:
+          type: integer
+          description: 用户ID
+        default_redirect:
+          $ref: '#/components/schemas/RedirectType'
+        never_expire:
+          type: boolean
+          description: 是否永不过期
+
+    UpdateShortLinkInput:
+      type: object
+      properties:
+        long_url:
+          type: string
+          format: uri
+          description: 原始URL
+        max_visits:
+          type: integer
+          description: 最大访问次数限制
+        expires_at:
+          type: string
+          format: date-time
+          description: 过期时间
+        never_expire:
+          type: boolean
+          description: 是否永不过期
+        default_redirect:
+          $ref: '#/components/schemas/RedirectType'
+
+    CreateRuleInput:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: 规则名称
+        description:
+          type: string
+          description: 规则描述
+        priority:
+          type: integer
+          description: 优先级(数字越大优先级越高)
+        type:
+          $ref: '#/components/schemas/RedirectType'
+        target_url:
+          type: string
+          format: uri
+          description: 目标URL(为空则使用短链接的原始URL)
+        device:
+          $ref: '#/components/schemas/DeviceType'
+        start_time:
+          type: string
+          format: date-time
+          description: 生效开始时间
+        end_time:
+          type: string
+          format: date-time
+          description: 生效结束时间
+        countries:
+          type: array
+          items:
+            type: string
+          description: 国家列表
+        percentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: A/B测试流量百分比
+        max_visits:
+          type: integer
+          description: 最大访问次数
+
+    RedirectRule:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 规则ID
+        short_link_id:
+          type: integer
+          description: 短链接ID
+        name:
+          type: string
+          description: 规则名称
+        description:
+          type: string
+          description: 规则描述
+        priority:
+          type: integer
+          description: 优先级
+        type:
+          $ref: '#/components/schemas/RedirectType'
+        target_url:
+          type: string
+          format: uri
+          description: 目标URL
+        device:
+          $ref: '#/components/schemas/DeviceType'
+        start_time:
+          type: string
+          format: date-time
+          description: 生效开始时间
+        end_time:
+          type: string
+          format: date-time
+          description: 生效结束时间
+        countries:
+          type: array
+          items:
+            type: string
+          description: 国家列表
+        provinces:
+          type: array
+          items:
+            type: string
+          description: 省份列表
+        cities:
+          type: array
+          items:
+            type: string
+          description: 城市列表
+        percentage:
+          type: integer
+          description: A/B测试流量百分比
+        max_visits:
+          type: integer
+          description: 最大访问次数
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    ShortLink:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 短链接ID
+        short_code:
+          type: string
+          description: 短码
+        long_url:
+          type: string
+          format: uri
+          description: 原始URL
+        user_id:
+          type: integer
+          description: 用户ID
+        clicks:
+          type: integer
+          description: 点击次数
+        max_visits:
+          type: integer
+          description: 最大访问次数限制
+        expires_at:
+          type: string
+          format: date-time
+          description: 过期时间
+        never_expire:
+          type: boolean
+          description: 是否永不过期
+        default_redirect:
+          $ref: '#/components/schemas/RedirectType'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedirectRule'
+          description: 跳转规则列表
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    ShortLinkFilter:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: 用户ID过滤
+        is_expired:
+          type: boolean
+          description: 是否已过期
+        start_time:
+          type: string
+          format: date-time
+          description: 创建时间范围开始
+        end_time:
+          type: string
+          format: date-time
+          description: 创建时间范围结束
+        min_clicks:
+          type: integer
+          description: 最小点击数
+        max_clicks:
+          type: integer
+          description: 最大点击数
+
+    ShortLinkSort:
+      type: object
+      properties:
+        field:
+          type: string
+          description: 排序字段
+        direction:
+          type: string
+          enum: [asc, desc]
+          description: 排序方向
+
+    PaginatedShortLinks:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: 总记录数
+        total_pages:
+          type: integer
+          description: 总页数
+        current_page:
+          type: integer
+          description: 当前页码
+        page_size:
+          type: integer
+          description: 每页数量
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShortLink'
+          description: 当前页数据
+
+    PaginatedClickLogs:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: 总记录数
+        total_pages:
+          type: integer
+          description: 总页数
+        current_page:
+          type: integer
+          description: 当前页码
+        page_size:
+          type: integer
+          description: 每页数量
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClickLog'
+          description: 当前页数据
+
+    ClickLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 日志ID
+        short_link_id:
+          type: integer
+          description: 短链接ID
+        rule_id:
+          type: integer
+          description: 使用的规则ID
+        ip:
+          type: string
+          description: 访问者IP
+        user_agent:
+          type: string
+          description: User-Agent
+        referer:
+          type: string
+          description: 来源页面
+        country:
+          type: string
+          description: 访问者国家/地区
+        device:
+          $ref: '#/components/schemas/DeviceType'
+        created_at:
+          type: string
+          format: date-time
+          description: 访问时间
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 400001
+              message:
+                type: string
+                example: "无效的请求参数"
+              details:
+                type: string
+                example: "请检查参数格式是否正确"
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 404001
+              message:
+                type: string
+                example: "短链接不存在"
+              details:
+                type: string
+                example: "请检查短码是否正确，或者该链接可能已被删除"
+
+    Conflict:
+      description: 资源冲突
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 409001
+              message:
+                type: string
+                example: "自定义短码已被使用"
+              details:
+                type: string
+                example: "请尝试使用其他短码，或让系统自动生成短码"
+
+    Gone:
+      description: 资源已过期
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 410001
+              message:
+                type: string
+                example: "短链接已过期"
+              details:
+                type: string
+                example: "该链接已超过设定的有效期，无法访问" 
