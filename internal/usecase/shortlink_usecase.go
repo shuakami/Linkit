@@ -119,8 +119,9 @@ func (u *ShortLinkUseCase) matchRule(rule *domain.RedirectRule, clickLog *domain
 
 	// 检查访问次数
 	if rule.MaxVisits != nil && *rule.MaxVisits <= 0 {
-		fmt.Printf("      ✗ 已达访问上限\n")
-		return false
+		fmt.Printf("      ✓ 无访问次数限制\n")
+	} else if rule.MaxVisits != nil {
+		fmt.Printf("      ℹ️ 访问限制: %d (当前暂不检查具体次数)\n", *rule.MaxVisits)
 	}
 
 	// 检查百分比
@@ -238,7 +239,9 @@ func (u *ShortLinkUseCase) Redirect(code string, clickLog *domain.ClickLog) (str
 	}
 
 	// 检查访问次数限制
-	if shortLink.MaxVisits != nil && shortLink.Clicks >= *shortLink.MaxVisits {
+	// 只有当MaxVisits不为nil，且值大于0，且当前点击数大于等于限制值时才限制访问
+	// 当MaxVisits为0时表示无限制访问
+	if shortLink.MaxVisits != nil && *shortLink.MaxVisits > 0 && shortLink.Clicks >= *shortLink.MaxVisits {
 		fmt.Printf("      ✗ 已达到最大访问次数限制\n")
 		return "", 0, domain.ErrMaxVisitsReached
 	}
